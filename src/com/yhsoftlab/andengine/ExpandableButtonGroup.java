@@ -26,7 +26,7 @@ public class ExpandableButtonGroup extends Entity {
 	// Constants
 	// ===========================================================
 	private final String TAG = this.getClass().getSimpleName();
-	private final int CAPACITY_DEFAULT = 8;
+	private final int CAPACITY_DEFAULT = 4;
 	// private final int ZINDEX_SUB_BUTTON = 1;
 	private final int ZINDEX_SUB_BUTTON_BG = 2;
 	private final int ZINDEX_SUB_BUTTON_FG = 3;
@@ -90,11 +90,11 @@ public class ExpandableButtonGroup extends Entity {
 
 		/* main button bg stuff */
 		mMainBtnBgRegion = pTextureRegionBg;
-		mMainBtnBgSprite = new Sprite(pWidth / 2, pHeight / 2, pWidth, pHeight,
-				pTextureRegionBg, pVertexBufferObjectManager);
+		mMainBtnBgSprite = new MainBtnBgSprite(pWidth / 2, pHeight / 2, pWidth,
+				pHeight, pTextureRegionBg, pVertexBufferObjectManager);
 		mMainBtnBgSprite.setZIndex(ZINDEX_MAIN_BUTTON_BG);
 		this.attachChild(mMainBtnBgSprite);
-		// mPendingTouchAreas.add(mMainBtnBgSprite);
+		mPendingTouchAreas.add(mMainBtnBgSprite);
 
 		/* main button fg stuff */
 		mMainBtnFgSprite = new Sprite(mMainBtnBgSprite.getWidth() / 2,
@@ -131,10 +131,8 @@ public class ExpandableButtonGroup extends Entity {
 						IEntity pItem) {
 					SubButton subBtn = mSubButtons.valueAt(idx);
 					if (subBtn != null) {
-						subBtn.mBG.setVisible(false);
-						subBtn.mBG.setIgnoreUpdate(true);
-						subBtn.mFG.setVisible(false);
-						subBtn.mFG.setIgnoreUpdate(true);
+						subBtn.setChildrenIgnoreUpdate(true);
+						subBtn.setChildrenVisible(false);
 					}
 				}
 			};
@@ -185,6 +183,11 @@ public class ExpandableButtonGroup extends Entity {
 			}
 			mPendingTouchAreas.clear();
 		}
+	}
+
+	@Override
+	public void onDetached() {
+		// TODO: unregister touch areas
 	}
 
 	@Override
@@ -324,25 +327,22 @@ public class ExpandableButtonGroup extends Entity {
 				(pTextureRegionBg != null) ? pTextureRegionBg
 						: this.mMainBtnBgRegion, pVertexBufferObjectManager);
 		if (pTextureRegionBg == null)
-			btnBg.setScale(0.8f);
+			btnBg.setScale(0.75f);
 		btnBg.setZIndex(ZINDEX_SUB_BUTTON_BG);
-		btnBg.setVisible(false);
-		btnBg.setIgnoreUpdate(true);
-		this.attachChild(btnBg);
 
 		final Sprite btnFg = new Sprite(btnBg.getWidth() / 2,
 				btnBg.getHeight() / 2, pTextureRegionFg,
 				pVertexBufferObjectManager);
 		btnFg.setZIndex(ZINDEX_SUB_BUTTON_FG);
-		btnFg.setVisible(false);
-		btnFg.setIgnoreUpdate(true);
-		btnBg.attachChild(btnFg);
 
 		final SubButton subBtn = new SubButton(btnBg, btnFg, pButtonId, -1);
+		subBtn.setChildrenIgnoreUpdate(true);
+		subBtn.setChildrenVisible(false);
+		this.attachChild(subBtn);
 
 		sortChildren();
 		mSubButtons.put(pButtonId, subBtn);
-		// registerTouchAreaOnParentScene(btnBg);
+		registerTouchAreaOnParentScene(subBtn);
 	}
 
 	public void AddToggleButon(final int pButtonId, final int pCurrentIndex,
@@ -410,7 +410,77 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	// Inner and Anonymous Classes
 	// ===========================================================
-	private class SubButton implements ISubButton {
+	private class MainBtnBgSprite extends Sprite {
+		public MainBtnBgSprite(final float pX, final float pY,
+				final float pWidth, final float pHeight,
+				final ITextureRegion pTextureRegion,
+				final VertexBufferObjectManager pVertexBufferObjectManager) {
+			super(pX, pY, pWidth, pHeight, pTextureRegion,
+					pVertexBufferObjectManager);
+		}
+
+		@Override
+		public boolean onAreaTouched(TouchEvent pSceneTouchEvent,
+				float pTouchAreaLocalX, float pTouchAreaLocalY) {
+
+			int action = pSceneTouchEvent.getAction();
+			switch (action) {
+			case TouchEvent.ACTION_DOWN:
+				this.setScale(1.3f);
+				break;
+			case TouchEvent.ACTION_MOVE:
+				/* do nothing */
+				break;
+			case TouchEvent.ACTION_UP:
+				/* scale down */
+				this.setScale(1.0f);
+
+				/* TODO: sound? */
+
+				/* skip if busy */
+				if (mMainBtnRotating)
+					break;
+
+				int subBtnCnt = mSubButtons.size();
+				SubButton subBtn;
+				if (mExpanded) {
+					mExpanded = false;
+					/* main btn ccw rotation */
+					mMainBtnRotationCCW.reset();
+					mMainBtnFgSprite
+							.registerEntityModifier(mMainBtnRotationCCW);
+					/* sub btns close in */
+					for (int i = 0; i < subBtnCnt; i++) {
+						subBtn = mSubButtons.valueAt(i);
+						mSubBtnMoveIn[i].reset();
+						subBtn.registerEntityModifier(mSubBtnMoveIn[i]);
+					}
+				} else {
+					mExpanded = true;
+					/* main btn cw rotation */
+					mMainBtnRotationCW.reset();
+					mMainBtnFgSprite.registerEntityModifier(mMainBtnRotationCW);
+					/* sub btns expand out */
+					for (int i = 0; i < subBtnCnt; i++) {
+						subBtn = mSubButtons.valueAt(i);
+						subBtn.setChildrenIgnoreUpdate(false);
+						subBtn.setChildrenVisible(true);
+						mSubBtnMoveOut[i].reset();
+						subBtn.registerEntityModifier(mSubBtnMoveOut[i]);
+					}
+				}
+				break;
+			default:
+				Log.w(TAG, "Unexpected action(" + action
+						+ ") happens in main button @ ExpandableButtonGroup.");
+				break;
+			}
+
+			return true;
+		}
+	}
+
+	private class SubButton extends Entity implements ISubButton {
 		public final Sprite mBG;
 		public final Sprite mFG;
 		private final int mId;
@@ -418,10 +488,50 @@ public class ExpandableButtonGroup extends Entity {
 
 		public SubButton(final Sprite pBgSprite, final Sprite pFgSprite,
 				final int pId, final int pIndex) {
+			super(ExpandableButtonGroup.this.getWidth() * 0.5f,
+					ExpandableButtonGroup.this.getHeight() * 0.5f, pBgSprite
+							.getWidth(), pBgSprite.getHeight());
+			pBgSprite.attachChild(pFgSprite);
+			this.attachChild(pBgSprite);
 			mBG = pBgSprite;
 			mFG = pFgSprite;
 			mId = pId;
 			mIndex = pIndex;
+		}
+
+		@Override
+		public boolean onAreaTouched(TouchEvent pSceneTouchEvent,
+				float pTouchAreaLocalX, float pTouchAreaLocalY) {
+
+			int action = pSceneTouchEvent.getAction();
+			switch (action) {
+			case TouchEvent.ACTION_DOWN:
+				/* scale up */
+				this.setScale(1.3f);
+				break;
+			case TouchEvent.ACTION_MOVE:
+				/* do nothing */
+				break;
+			case TouchEvent.ACTION_UP:
+				/* scale down */
+				this.setScale(1.0f);
+
+				/* TODO: sound? */
+
+				/* skip if busy */
+				if (mMainBtnRotating) // TODO: add self animation flag..
+					break;
+
+				if (ExpandableButtonGroup.this.mOnSubButtonClickListener != null)
+					ExpandableButtonGroup.this.mOnSubButtonClickListener.onSubButtonClicked(this);
+				break;
+			default:
+				Log.w(TAG, "Unexpected action(" + action
+						+ ") happens in ExpandableButtonGroup.onAreaTouched.");
+				break;
+			}
+
+			return true;
 		}
 
 		@Override
@@ -452,11 +562,14 @@ public class ExpandableButtonGroup extends Entity {
 			return false;
 		}
 	}
-	
+
 	public interface ISubButton {
 		int getId();
+
 		boolean isMultiState();
+
 		int getCurrentIndex();
+
 		void setCurrentIndex(final int pIndex);
 	}
 
