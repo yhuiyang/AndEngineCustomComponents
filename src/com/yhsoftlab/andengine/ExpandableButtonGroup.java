@@ -7,7 +7,9 @@ import org.andengine.entity.Entity;
 import org.andengine.entity.IEntity;
 import org.andengine.entity.modifier.IEntityModifier.IEntityModifierListener;
 import org.andengine.entity.modifier.MoveYModifier;
+import org.andengine.entity.modifier.ParallelEntityModifier;
 import org.andengine.entity.modifier.RotationModifier;
+import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.scene.ITouchArea;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.sprite.Sprite;
@@ -32,7 +34,6 @@ public class ExpandableButtonGroup extends Entity {
 	private final int ZINDEX_MAIN_BUTTON = Integer.MAX_VALUE;
 	private final float MAIN_BTN_ROTATION_DURATION = 0.3f;
 	private final float MAIN_BTN_ROTATION_DEGREE = 180.0f;
-	private final float SUB_BTN_MOVE_DURATION = 0.1f;
 
 	// ===========================================================
 	// Fields
@@ -48,9 +49,6 @@ public class ExpandableButtonGroup extends Entity {
 	private final RotationModifier mMainBtnRotationCW;
 	private final RotationModifier mMainBtnRotationCCW;
 	private IOnSubButtonClickListener mOnSubButtonClickListener = null;
-	private final MoveYModifier[] mSubBtnMoveOut = new MoveYModifier[4]; // TODO:
-	private final MoveYModifier[] mSubBtnMoveIn = new MoveYModifier[4];
-	private final IEntityModifierListener[] mSubBtnMoveInListener = new IEntityModifierListener[4];
 	private Sound mSound = null;
 	private int mSubButtonsZIndex = ZINDEX_SUB_BUTTON_START;
 
@@ -116,26 +114,6 @@ public class ExpandableButtonGroup extends Entity {
 			}
 		};
 
-		for (int i = 0; i < 4; i++) {
-			final int idx = i;
-			mSubBtnMoveInListener[i] = new IEntityModifierListener() {
-				@Override
-				public void onModifierStarted(IModifier<IEntity> pModifier,
-						IEntity pItem) {
-				}
-
-				@Override
-				public void onModifierFinished(IModifier<IEntity> pModifier,
-						IEntity pItem) {
-					SubButton subBtn = mSubButtons.valueAt(idx);
-					if (subBtn != null) {
-						subBtn.setChildrenIgnoreUpdate(true);
-						subBtn.setChildrenVisible(false);
-					}
-				}
-			};
-		}
-
 		/* pre-defined entity modifiers for main btn */
 		mMainBtnRotationCW = new RotationModifier(MAIN_BTN_ROTATION_DURATION,
 				0, MAIN_BTN_ROTATION_DEGREE, mMainBtnRotationListener);
@@ -143,19 +121,6 @@ public class ExpandableButtonGroup extends Entity {
 		mMainBtnRotationCCW = new RotationModifier(MAIN_BTN_ROTATION_DURATION,
 				MAIN_BTN_ROTATION_DEGREE, 0, mMainBtnRotationListener);
 		mMainBtnRotationCCW.setAutoUnregisterWhenFinished(true);
-
-		/* pre-defined entity modifiers for sub btns */
-		for (int i = 0; i < 4; i++) {
-			mSubBtnMoveOut[i] = new MoveYModifier(SUB_BTN_MOVE_DURATION,
-					mMainBtnBgSprite.getHeight() / 2,
-					mMainBtnBgSprite.getHeight() * (i + 1.5f));
-			mSubBtnMoveOut[i].setAutoUnregisterWhenFinished(true);
-			mSubBtnMoveIn[i] = new MoveYModifier(SUB_BTN_MOVE_DURATION,
-					mMainBtnBgSprite.getHeight() * (i + 1.5f),
-					mMainBtnBgSprite.getHeight() / 2, mSubBtnMoveInListener[i]);
-			mSubBtnMoveIn[i].setAutoUnregisterWhenFinished(true);
-		}
-
 	}
 
 	// ===========================================================
@@ -352,8 +317,7 @@ public class ExpandableButtonGroup extends Entity {
 					/* sub btns close in */
 					for (int i = 0; i < subBtnCnt; i++) {
 						subBtn = mSubButtons.valueAt(i);
-						mSubBtnMoveIn[i].reset();
-						subBtn.registerEntityModifier(mSubBtnMoveIn[i]);
+						subBtn.Show(false);
 					}
 				} else {
 					mExpanded = true;
@@ -363,10 +327,7 @@ public class ExpandableButtonGroup extends Entity {
 					/* sub btns expand out */
 					for (int i = 0; i < subBtnCnt; i++) {
 						subBtn = mSubButtons.valueAt(i);
-						subBtn.setChildrenIgnoreUpdate(false);
-						subBtn.setChildrenVisible(true);
-						mSubBtnMoveOut[i].reset();
-						subBtn.registerEntityModifier(mSubBtnMoveOut[i]);
+						subBtn.Show(true);
 					}
 				}
 				break;
@@ -384,12 +345,70 @@ public class ExpandableButtonGroup extends Entity {
 
 		private final int mId;
 		private int mIndex;
+		private final float SUB_BTN_ANIMATION_DURATION = 0.3f;
+		private final float SUB_BTN_SCALE_MIN = 0.1f;
+		private final MoveYModifier mMoveOutModifier;
+		private final MoveYModifier mMoveInModifier;
+		private final ScaleModifier mScaleOutModifier;
+		private final ScaleModifier mScaleInModifier;
+		private final ParallelEntityModifier mAnimationOutModifier;
+		private final ParallelEntityModifier mAnimationInModifier;
+		private boolean mAnimating = false;
+		private final IEntityModifierListener mAnimationListener;
 
 		public SubButton(final int pId, final int pIndex) {
 			super(ExpandableButtonGroup.this.getWidth() * 0.5f,
 					ExpandableButtonGroup.this.getHeight() * 0.5f);
 			mId = pId;
 			mIndex = pIndex;
+
+			/* init self modifiers & modifier listeners */
+			int subBtnCnt = ExpandableButtonGroup.this.mSubButtons.size();
+			mMoveOutModifier = new MoveYModifier(SUB_BTN_ANIMATION_DURATION,
+					mMainBtnBgSprite.getHeight() * 0.5f,
+					mMainBtnBgSprite.getHeight() * (subBtnCnt + 1.8f));
+			mMoveInModifier = new MoveYModifier(SUB_BTN_ANIMATION_DURATION,
+					mMainBtnBgSprite.getHeight() * (subBtnCnt + 1.8f),
+					mMainBtnBgSprite.getHeight() * 0.5f);
+			mScaleOutModifier = new ScaleModifier(SUB_BTN_ANIMATION_DURATION,
+					SUB_BTN_SCALE_MIN, 1.0f);
+			mScaleInModifier = new ScaleModifier(SUB_BTN_ANIMATION_DURATION,
+					1.0f, SUB_BTN_SCALE_MIN);
+			mAnimationListener = new IEntityModifierListener() {
+				@Override
+				public void onModifierStarted(IModifier<IEntity> pModifier,
+						IEntity pItem) {
+					SubButton.this.mAnimating = true;
+				}
+
+				@Override
+				public void onModifierFinished(IModifier<IEntity> pModifier,
+						IEntity pItem) {
+					SubButton.this.mAnimating = false;
+					if (pModifier.equals(SubButton.this.mAnimationInModifier)) {
+						SubButton.this.setChildrenIgnoreUpdate(true);
+						SubButton.this.setChildrenVisible(false);
+					}
+				}
+			};
+			mAnimationOutModifier = new ParallelEntityModifier(
+					mAnimationListener, mMoveOutModifier, mScaleOutModifier);
+			mAnimationOutModifier.setAutoUnregisterWhenFinished(true);
+			mAnimationInModifier = new ParallelEntityModifier(
+					mAnimationListener, mMoveInModifier, mScaleInModifier);
+			mAnimationInModifier.setAutoUnregisterWhenFinished(true);
+		}
+
+		public void Show(boolean pShow) {
+			if (pShow) {
+				this.setChildrenIgnoreUpdate(false);
+				this.setChildrenVisible(true);
+				mAnimationOutModifier.reset();
+				this.registerEntityModifier(mAnimationOutModifier);
+			} else {
+				mAnimationInModifier.reset();
+				this.registerEntityModifier(mAnimationInModifier);
+			}
 		}
 
 		@Override
@@ -424,7 +443,7 @@ public class ExpandableButtonGroup extends Entity {
 				ExpandableButtonGroup.this.soundPlay();
 
 				/* skip if busy */
-				if (mMainBtnRotating) // TODO: add self animation flag..
+				if (mAnimating)
 					break;
 
 				if (ExpandableButtonGroup.this.mOnSubButtonClickListener != null)
@@ -433,7 +452,7 @@ public class ExpandableButtonGroup extends Entity {
 				break;
 			default:
 				Log.w(TAG, "Unexpected action(" + action
-						+ ") happens in ExpandableButtonGroup.onAreaTouched.");
+						+ ") happens in SubButton.onAreaTouched.");
 				break;
 			}
 
