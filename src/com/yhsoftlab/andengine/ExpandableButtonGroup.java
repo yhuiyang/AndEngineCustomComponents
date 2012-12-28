@@ -28,12 +28,8 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	private final String TAG = this.getClass().getSimpleName();
 	private final int CAPACITY_DEFAULT = 4;
-	// private final int ZINDEX_SUB_BUTTON = 1;
-	private final int ZINDEX_SUB_BUTTON_BG = 2;
-	private final int ZINDEX_SUB_BUTTON_FG = 3;
-	// private final int ZINDEX_MAIN_BUTTON = 4;
-	private final int ZINDEX_MAIN_BUTTON_BG = 5;
-	private final int ZINDEX_MAIN_BUTTON_FG = 6;
+	private final int ZINDEX_SUB_BUTTON_START = 1;
+	private final int ZINDEX_MAIN_BUTTON = Integer.MAX_VALUE;
 	private final float MAIN_BTN_ROTATION_DURATION = 0.3f;
 	private final float MAIN_BTN_ROTATION_DEGREE = 180.0f;
 	private final float SUB_BTN_MOVE_DURATION = 0.1f;
@@ -56,6 +52,7 @@ public class ExpandableButtonGroup extends Entity {
 	private final MoveYModifier[] mSubBtnMoveIn = new MoveYModifier[4];
 	private final IEntityModifierListener[] mSubBtnMoveInListener = new IEntityModifierListener[4];
 	private Sound mSound = null;
+	private int mSubButtonsZIndex = ZINDEX_SUB_BUTTON_START;
 
 	// ===========================================================
 	// Constructors
@@ -94,7 +91,7 @@ public class ExpandableButtonGroup extends Entity {
 		mMainBtnBgRegion = pTextureRegionBg;
 		mMainBtnBgSprite = new MainBtnBgSprite(pWidth / 2, pHeight / 2, pWidth,
 				pHeight, pTextureRegionBg, pVertexBufferObjectManager);
-		mMainBtnBgSprite.setZIndex(ZINDEX_MAIN_BUTTON_BG);
+		mMainBtnBgSprite.setZIndex(ZINDEX_MAIN_BUTTON);
 		this.attachChild(mMainBtnBgSprite);
 		mPendingTouchAreas.add(mMainBtnBgSprite);
 
@@ -102,7 +99,6 @@ public class ExpandableButtonGroup extends Entity {
 		mMainBtnFgSprite = new Sprite(mMainBtnBgSprite.getWidth() / 2,
 				mMainBtnBgSprite.getHeight() / 2, pTextureRegionFg,
 				pVertexBufferObjectManager);
-		mMainBtnFgSprite.setZIndex(ZINDEX_MAIN_BUTTON_FG);
 		mMainBtnBgSprite.attachChild(mMainBtnFgSprite);
 
 		/* pre-defined entity modifier listener */
@@ -221,6 +217,7 @@ public class ExpandableButtonGroup extends Entity {
 		final SubButton subBtn = new SubButton(pButtonId, -1);
 		subBtn.setChildrenIgnoreUpdate(true);
 		subBtn.setChildrenVisible(false);
+		subBtn.setZIndex(this.mSubButtonsZIndex++);
 		this.attachChild(subBtn);
 
 		final Sprite btnBg = new Sprite(this.getWidth() / 2,
@@ -229,13 +226,11 @@ public class ExpandableButtonGroup extends Entity {
 						: this.mMainBtnBgRegion, pVertexBufferObjectManager);
 		if (pTextureRegionBg == null)
 			btnBg.setScale(0.75f);
-		btnBg.setZIndex(ZINDEX_SUB_BUTTON_BG);
 		subBtn.attachChild(btnBg);
 
 		final Sprite btnFg = new Sprite(btnBg.getWidth() / 2,
 				btnBg.getHeight() / 2, pTextureRegionFg,
 				pVertexBufferObjectManager);
-		btnFg.setZIndex(ZINDEX_SUB_BUTTON_FG);
 		btnBg.attachChild(btnFg);
 
 		sortChildren();
@@ -266,6 +261,7 @@ public class ExpandableButtonGroup extends Entity {
 		final SubButton subBtn = new SubButton(pButtonId, pCurrentIndex);
 		subBtn.setChildrenIgnoreUpdate(true);
 		subBtn.setChildrenVisible(false);
+		subBtn.setZIndex(this.mSubButtonsZIndex++);
 		this.attachChild(subBtn);
 
 		final Sprite btnBg;
@@ -277,13 +273,11 @@ public class ExpandableButtonGroup extends Entity {
 			btnBg = new Sprite(0, 0, this.mMainBtnBgRegion,
 					pVertexBufferObjectManager);
 		}
-		btnBg.setZIndex(ZINDEX_SUB_BUTTON_BG);
 		subBtn.attachChild(btnBg);
 
 		final TiledSprite btnFg = new TiledSprite(btnBg.getWidth() / 2,
 				btnBg.getHeight() / 2, pTiledTextureRegionFg,
 				pVertexBufferObjectManager);
-		btnFg.setZIndex(ZINDEX_SUB_BUTTON_FG);
 		btnFg.setCurrentTileIndex(pCurrentIndex);
 		btnBg.attachChild(btnFg);
 
