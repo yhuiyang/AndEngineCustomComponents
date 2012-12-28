@@ -2,6 +2,7 @@ package com.yhsoftlab.andengine;
 
 import java.util.ArrayList;
 
+import org.andengine.audio.sound.Sound;
 import org.andengine.entity.Entity;
 import org.andengine.entity.IEntity;
 import org.andengine.entity.modifier.IEntityModifier.IEntityModifierListener;
@@ -54,6 +55,7 @@ public class ExpandableButtonGroup extends Entity {
 	private final MoveYModifier[] mSubBtnMoveOut = new MoveYModifier[4]; // TODO:
 	private final MoveYModifier[] mSubBtnMoveIn = new MoveYModifier[4];
 	private final IEntityModifierListener[] mSubBtnMoveInListener = new IEntityModifierListener[4];
+	private Sound mSound = null;
 
 	// ===========================================================
 	// Constructors
@@ -163,6 +165,9 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	// Getter & Setter
 	// ===========================================================
+	public void SetSound(Sound pSound) {
+		this.mSound = pSound;
+	}
 
 	// ===========================================================
 	// Methods for/from SuperClass/Interfaces
@@ -299,6 +304,11 @@ public class ExpandableButtonGroup extends Entity {
 		}
 	}
 
+	private void soundPlay() {
+		if (mSound != null)
+			mSound.play();
+	}
+
 	// ===========================================================
 	// Inner and Anonymous Classes
 	// ===========================================================
@@ -327,7 +337,8 @@ public class ExpandableButtonGroup extends Entity {
 				/* scale down */
 				this.setScale(1.0f);
 
-				/* TODO: sound? */
+				/* sound feedback */
+				ExpandableButtonGroup.this.soundPlay();
 
 				/* skip if busy */
 				if (mMainBtnRotating)
@@ -412,7 +423,8 @@ public class ExpandableButtonGroup extends Entity {
 				/* scale down */
 				this.setScale(1.0f);
 
-				/* TODO: sound? */
+				/* sound feedback */
+				ExpandableButtonGroup.this.soundPlay();
 
 				/* skip if busy */
 				if (mMainBtnRotating) // TODO: add self animation flag..
