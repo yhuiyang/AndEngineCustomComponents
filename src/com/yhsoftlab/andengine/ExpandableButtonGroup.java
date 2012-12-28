@@ -264,6 +264,9 @@ public class ExpandableButtonGroup extends Entity {
 		}
 
 		final SubButton subBtn = new SubButton(pButtonId, pCurrentIndex);
+		subBtn.setChildrenIgnoreUpdate(true);
+		subBtn.setChildrenVisible(false);
+		this.attachChild(subBtn);
 
 		final Sprite btnBg;
 		if (pTiledTextureRegionBg != null) {
