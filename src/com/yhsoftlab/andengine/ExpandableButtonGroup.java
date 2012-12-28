@@ -213,6 +213,11 @@ public class ExpandableButtonGroup extends Entity {
 					+ ") is used, choose others...");
 		}
 
+		final SubButton subBtn = new SubButton(pButtonId, -1);
+		subBtn.setChildrenIgnoreUpdate(true);
+		subBtn.setChildrenVisible(false);
+		this.attachChild(subBtn);
+
 		final Sprite btnBg = new Sprite(this.getWidth() / 2,
 				this.getHeight() / 2,
 				(pTextureRegionBg != null) ? pTextureRegionBg
@@ -220,16 +225,13 @@ public class ExpandableButtonGroup extends Entity {
 		if (pTextureRegionBg == null)
 			btnBg.setScale(0.75f);
 		btnBg.setZIndex(ZINDEX_SUB_BUTTON_BG);
+		subBtn.attachChild(btnBg);
 
 		final Sprite btnFg = new Sprite(btnBg.getWidth() / 2,
 				btnBg.getHeight() / 2, pTextureRegionFg,
 				pVertexBufferObjectManager);
 		btnFg.setZIndex(ZINDEX_SUB_BUTTON_FG);
-
-		final SubButton subBtn = new SubButton(btnBg, btnFg, pButtonId, -1);
-		subBtn.setChildrenIgnoreUpdate(true);
-		subBtn.setChildrenVisible(false);
-		this.attachChild(subBtn);
+		btnBg.attachChild(btnFg);
 
 		sortChildren();
 		mSubButtons.put(pButtonId, subBtn);
@@ -256,6 +258,8 @@ public class ExpandableButtonGroup extends Entity {
 					+ ") is used, choose others...");
 		}
 
+		final SubButton subBtn = new SubButton(pButtonId, pCurrentIndex);
+
 		final Sprite btnBg;
 		if (pTiledTextureRegionBg != null) {
 			btnBg = new TiledSprite(0, 0, pTiledTextureRegionBg,
@@ -266,7 +270,7 @@ public class ExpandableButtonGroup extends Entity {
 					pVertexBufferObjectManager);
 		}
 		btnBg.setZIndex(ZINDEX_SUB_BUTTON_BG);
-		this.attachChild(btnBg);
+		subBtn.attachChild(btnBg);
 
 		final TiledSprite btnFg = new TiledSprite(btnBg.getWidth() / 2,
 				btnBg.getHeight() / 2, pTiledTextureRegionFg,
@@ -274,9 +278,6 @@ public class ExpandableButtonGroup extends Entity {
 		btnFg.setZIndex(ZINDEX_SUB_BUTTON_FG);
 		btnFg.setCurrentTileIndex(pCurrentIndex);
 		btnBg.attachChild(btnFg);
-
-		final SubButton subBtn = new SubButton(btnBg, btnFg, pButtonId,
-				pCurrentIndex);
 
 		sortChildren();
 		mSubButtons.put(pButtonId, subBtn);
@@ -372,22 +373,26 @@ public class ExpandableButtonGroup extends Entity {
 	}
 
 	private class SubButton extends Entity implements ISubButton {
-		public final Sprite mBG;
-		public final Sprite mFG;
+
 		private final int mId;
 		private int mIndex;
 
-		public SubButton(final Sprite pBgSprite, final Sprite pFgSprite,
-				final int pId, final int pIndex) {
+		public SubButton(final int pId, final int pIndex) {
 			super(ExpandableButtonGroup.this.getWidth() * 0.5f,
-					ExpandableButtonGroup.this.getHeight() * 0.5f, pBgSprite
-							.getWidth(), pBgSprite.getHeight());
-			pBgSprite.attachChild(pFgSprite);
-			this.attachChild(pBgSprite);
-			mBG = pBgSprite;
-			mFG = pFgSprite;
+					ExpandableButtonGroup.this.getHeight() * 0.5f);
 			mId = pId;
 			mIndex = pIndex;
+		}
+
+		@Override
+		public void attachChild(IEntity pEntity) throws IllegalStateException {
+			super.attachChild(pEntity);
+
+			if (this.mChildren != null && this.mChildren.size() == 1) {
+				IEntity firstChild = this.getFirstChild();
+				this.setWidth(firstChild.getWidth());
+				this.setHeight(firstChild.getHeight());
+			}
 		}
 
 		@Override
@@ -414,7 +419,8 @@ public class ExpandableButtonGroup extends Entity {
 					break;
 
 				if (ExpandableButtonGroup.this.mOnSubButtonClickListener != null)
-					ExpandableButtonGroup.this.mOnSubButtonClickListener.onSubButtonClicked(this);
+					ExpandableButtonGroup.this.mOnSubButtonClickListener
+							.onSubButtonClicked(this);
 				break;
 			default:
 				Log.w(TAG, "Unexpected action(" + action
@@ -437,20 +443,36 @@ public class ExpandableButtonGroup extends Entity {
 
 		@Override
 		public void setCurrentIndex(final int pIndex) {
+
 			mIndex = pIndex;
-			if (mBG instanceof TiledSprite) {
-				((TiledSprite) mBG).setCurrentTileIndex(mIndex);
-			}
-			if (mFG instanceof TiledSprite) {
-				((TiledSprite) mFG).setCurrentTileIndex(mIndex);
+			IEntity firstChild = this.getFirstChild();
+
+			if (firstChild != null) {
+				if (firstChild instanceof TiledSprite) {
+					((TiledSprite) firstChild).setCurrentTileIndex(mIndex);
+				}
+				IEntity firstGrandChild = firstChild.getFirstChild();
+				if (firstGrandChild != null
+						&& firstGrandChild instanceof TiledSprite) {
+					((TiledSprite) firstGrandChild).setCurrentTileIndex(mIndex);
+				}
 			}
 		}
 
 		@Override
 		public boolean isMultiState() {
-			if (mFG instanceof TiledSprite)
-				return true;
-			return false;
+
+			boolean multiState = false;
+
+			IEntity firstGrandChild, firstChild = this.getFirstChild();
+			if (firstChild != null) {
+				firstGrandChild = firstChild.getFirstChild();
+				if (firstGrandChild != null
+						&& firstGrandChild instanceof TiledSprite)
+					multiState = true;
+			}
+
+			return multiState;
 		}
 	}
 
