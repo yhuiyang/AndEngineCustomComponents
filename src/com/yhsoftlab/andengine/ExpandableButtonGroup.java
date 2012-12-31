@@ -23,6 +23,23 @@ import org.andengine.util.modifier.IModifier;
 import android.util.Log;
 import android.util.SparseArray;
 
+/**
+ * <p>
+ * ExpandableButtonGroup mimics the button operation used in Angry birds, Bad
+ * Piggies series games.
+ * <p>
+ * Initially, there is a main sprite button (when constructor is called), and
+ * several other sub sprite buttons located behide the main button (when
+ * AddButton is called). When main sprite button is clicked, all sub sprite
+ * buttons popup with some animation effect, and then, all sub sprite buttons is
+ * clickable. Application need to implement the IOnSubButtonClickListener
+ * interface to receive the onSubButtonClicked callback method. When main sprite
+ * button is clicked again, all sub sprite buttons closed.
+ * <p>
+ * Note that, this code is based on AndEngine AnchorCenter branch, and did not
+ * test on GLES2 branch, so it is expected if it didn't work on GLES2 branch.
+ */
+
 public class ExpandableButtonGroup extends Entity {
 
 	// ===========================================================
@@ -55,6 +72,20 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	// Constructors
 	// ===========================================================
+	/**
+	 * Constructor of ExpandableButtonGroup
+	 * 
+	 * @param pX
+	 *            x coordinate of the anchor center point
+	 * @param pY
+	 *            y coordinate of the anchor center point
+	 * @param pTextureRegionBg
+	 *            TextureRegion used by background of the main button
+	 * @param pTextureRegionFg
+	 *            TextureRegion used by foreground of the main button
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager
+	 */
 	public ExpandableButtonGroup(final float pX, final float pY,
 			final ITextureRegion pTextureRegionBg,
 			final ITextureRegion pTextureRegionFg,
@@ -63,6 +94,27 @@ public class ExpandableButtonGroup extends Entity {
 				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
 	}
 
+	/**
+	 * 
+	 * @param pX
+	 *            x coordinate of the anchor center point
+	 * @param pY
+	 *            y coordinate of the anchor center point
+	 * @param pWidth
+	 *            The width of the main button background. Usually, you don't
+	 *            need assign it unless you need to scale up/down the main
+	 *            button.
+	 * @param pHeight
+	 *            The height of the main button background. Usually, you don't
+	 *            need assign it unless you need to scale up/down the main
+	 *            button.
+	 * @param pTextureRegionBg
+	 *            TextureRegion used by background of the main button
+	 * @param pTextureRegionFg
+	 *            TextureRegion used by foreground of the main button
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager
+	 */
 	public ExpandableButtonGroup(final float pX, final float pY,
 			final float pWidth, final float pHeight,
 			final ITextureRegion pTextureRegionBg,
@@ -126,6 +178,13 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	// Getter & Setter
 	// ===========================================================
+	/**
+	 * Control the sound feedback when any button is clicked.
+	 * 
+	 * @param pSound
+	 *            The {@link Sound} object to play when button's ACTION_UP event
+	 *            happened. Set this null to disable sound feedback.
+	 */
 	public void SetSound(Sound pSound) {
 		this.mSound = pSound;
 	}
@@ -159,6 +218,18 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	// Methods
 	// ===========================================================
+	/**
+	 * Add normal sub button.
+	 * 
+	 * @param pButtonId
+	 *            The subbutton id.
+	 * @param pTextureRegionBg
+	 *            TextureRegion used by the background of the sub button.
+	 * @param pTextureRegionFg
+	 *            TextureRegion used by the foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
 	public void AddButton(final int pButtonId,
 			final ITextureRegion pTextureRegionBg,
 			final ITextureRegion pTextureRegionFg,
@@ -203,6 +274,20 @@ public class ExpandableButtonGroup extends Entity {
 		registerTouchAreaOnParentScene(subBtn);
 	}
 
+	/**
+	 * Add multi-state sub button
+	 * 
+	 * @param pButtonId
+	 *            The sub button id.
+	 * @param pCurrentIndex
+	 *            The index of the current state.
+	 * @param pTiledTextureRegionBg
+	 *            TiledTextureRegion used by background of the sub button.
+	 * @param pTiledTextureRegionFg
+	 *            TiledTextureRegion used by foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
 	public void AddToggleButon(final int pButtonId, final int pCurrentIndex,
 			final ITiledTextureRegion pTiledTextureRegionBg,
 			final ITiledTextureRegion pTiledTextureRegionFg,
@@ -251,6 +336,12 @@ public class ExpandableButtonGroup extends Entity {
 		registerTouchAreaOnParentScene(btnBg);
 	}
 
+	/**
+	 * Register IOnSubButtonClickListener
+	 * 
+	 * @param pOnSubButtonClickListener
+	 *            the IOnSubButtonClickListener instance.
+	 */
 	public void setOnSubButtonClickListener(
 			final IOnSubButtonClickListener pOnSubButtonClickListener) {
 		this.mOnSubButtonClickListener = pOnSubButtonClickListener;
@@ -505,12 +596,31 @@ public class ExpandableButtonGroup extends Entity {
 	}
 
 	public interface ISubButton {
+
+		/**
+		 * @return Id of this sub button.
+		 */
 		int getId();
 
+		/**
+		 * @return true if this sub button is multi-state sub button.<br>
+		 *         false if this is not.
+		 */
 		boolean isMultiState();
 
+		/**
+		 * Only useful if this is multi-state sub button.
+		 * 
+		 * @return the current state of this sub button.
+		 */
 		int getCurrentIndex();
 
+		/**
+		 * Only useful if this is multi-state sub button.
+		 * 
+		 * @param pIndex
+		 *            the current state of this sub button.
+		 */
 		void setCurrentIndex(final int pIndex);
 	}
 
