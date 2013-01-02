@@ -256,12 +256,17 @@ public class ExpandableButtonGroup extends Entity {
 		subBtn.setZIndex(this.mSubButtonsZIndex++);
 		this.attachChild(subBtn);
 
-		final Sprite btnBg = new Sprite(this.getWidth() / 2,
-				this.getHeight() / 2,
-				(pTextureRegionBg != null) ? pTextureRegionBg
-						: this.mMainBtnBgRegion, pVertexBufferObjectManager);
-		if (pTextureRegionBg == null)
+		final Sprite btnBg;
+		if (pTextureRegionBg != null) {
+			btnBg = new Sprite(pTextureRegionBg.getWidth() / 2,
+					pTextureRegionBg.getHeight() / 2, pTextureRegionBg,
+					pVertexBufferObjectManager);
+		} else {
+			btnBg = new Sprite(this.mMainBtnBgRegion.getWidth() / 2,
+					this.mMainBtnBgRegion.getHeight() / 2,
+					this.mMainBtnBgRegion, pVertexBufferObjectManager);
 			btnBg.setScale(0.75f);
+		}
 		subBtn.attachChild(btnBg);
 
 		final Sprite btnFg = new Sprite(btnBg.getWidth() / 2,
@@ -288,7 +293,8 @@ public class ExpandableButtonGroup extends Entity {
 	 * @param pVertexBufferObjectManager
 	 *            VBO manager.
 	 */
-	public void AddToggleButon(final int pButtonId, final int pCurrentIndex,
+	public void AddMultiStateButton(final int pButtonId,
+			final int pCurrentIndex,
 			final ITiledTextureRegion pTiledTextureRegionBg,
 			final ITiledTextureRegion pTiledTextureRegionFg,
 			final VertexBufferObjectManager pVertexBufferObjectManager) {
@@ -316,12 +322,14 @@ public class ExpandableButtonGroup extends Entity {
 
 		final Sprite btnBg;
 		if (pTiledTextureRegionBg != null) {
-			btnBg = new TiledSprite(0, 0, pTiledTextureRegionBg,
-					pVertexBufferObjectManager);
+			btnBg = new TiledSprite(pTiledTextureRegionBg.getWidth() / 2,
+					pTiledTextureRegionBg.getHeight() / 2,
+					pTiledTextureRegionBg, pVertexBufferObjectManager);
 			((TiledSprite) btnBg).setCurrentTileIndex(pCurrentIndex);
 		} else {
-			btnBg = new Sprite(0, 0, this.mMainBtnBgRegion,
-					pVertexBufferObjectManager);
+			btnBg = new Sprite(this.getWidth() / 2, this.getHeight() / 2,
+					this.mMainBtnBgRegion, pVertexBufferObjectManager);
+			btnBg.setScale(0.75f);
 		}
 		subBtn.attachChild(btnBg);
 
@@ -333,7 +341,7 @@ public class ExpandableButtonGroup extends Entity {
 
 		sortChildren();
 		mSubButtons.put(pButtonId, subBtn);
-		registerTouchAreaOnParentScene(btnBg);
+		registerTouchAreaOnParentScene(subBtn);
 	}
 
 	/**
@@ -568,12 +576,19 @@ public class ExpandableButtonGroup extends Entity {
 
 			if (firstChild != null) {
 				if (firstChild instanceof TiledSprite) {
-					((TiledSprite) firstChild).setCurrentTileIndex(mIndex);
+					final TiledSprite s = (TiledSprite) firstChild;
+					if (pIndex < s.getTileCount()) {
+						s.setCurrentTileIndex(mIndex);
+					}
 				}
 				IEntity firstGrandChild = firstChild.getFirstChild();
-				if (firstGrandChild != null
-						&& firstGrandChild instanceof TiledSprite) {
-					((TiledSprite) firstGrandChild).setCurrentTileIndex(mIndex);
+				if (firstGrandChild != null) {
+					if (firstGrandChild instanceof TiledSprite) {
+						final TiledSprite s = (TiledSprite) firstGrandChild;
+						if (pIndex < s.getTileCount()) {
+							s.setCurrentTileIndex(mIndex);
+						}
+					}
 				}
 			}
 		}
