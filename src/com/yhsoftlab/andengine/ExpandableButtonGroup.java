@@ -5,15 +5,18 @@ import java.util.ArrayList;
 import org.andengine.audio.sound.Sound;
 import org.andengine.entity.Entity;
 import org.andengine.entity.IEntity;
+import org.andengine.entity.modifier.CascadingAlphaModifier;
 import org.andengine.entity.modifier.IEntityModifier.IEntityModifierListener;
 import org.andengine.entity.modifier.MoveYModifier;
 import org.andengine.entity.modifier.ParallelEntityModifier;
 import org.andengine.entity.modifier.RotationModifier;
 import org.andengine.entity.modifier.ScaleModifier;
+import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.ITouchArea;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.sprite.TiledSprite;
+import org.andengine.entity.text.Text;
 import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
@@ -38,9 +41,32 @@ import android.util.SparseArray;
  * <p>
  * Note that, this code is based on AndEngine AnchorCenter branch, and did not
  * test on GLES2 branch, so it is expected if it didn't work on GLES2 branch.
+ * 
+ * <pre>
+ * Parent-children relationship:
+ * ExpandableButtonGroup
+ *    L MainBtnBgSprite => handle touch events. entity modifier target.
+ *       L MainBtnFgSprite
+ *    L SubButton => handle touch events.
+ *       L SubBtnBgSprite => sprite entity modifer target.
+ *          L SubBtnFgSprite
+ *       L Rect => (optional) for better child text recognize. entity modifier target.
+ *          L Text => (optional) text description for this sub button.
+ * </pre>
  */
 
 public class ExpandableButtonGroup extends Entity {
+
+	// ===========================================================
+	// Enumeration
+	// ===========================================================
+	public enum ExpandDirection {
+		UP, DOWN;
+	}
+
+	public enum TextExpandDirection {
+		LEFT, RIGHT;
+	}
 
 	// ===========================================================
 	// Constants
@@ -68,6 +94,7 @@ public class ExpandableButtonGroup extends Entity {
 	private IOnSubButtonClickListener mOnSubButtonClickListener = null;
 	private Sound mSound = null;
 	private int mSubButtonsZIndex = ZINDEX_SUB_BUTTON_START;
+	private int[] mExpandDirectionCount;
 
 	// ===========================================================
 	// Constructors
@@ -136,6 +163,9 @@ public class ExpandableButtonGroup extends Entity {
 		/* containers */
 		mSubButtons = new SparseArray<SubButton>(CAPACITY_DEFAULT);
 		mPendingTouchAreas = new ArrayList<ITouchArea>(CAPACITY_DEFAULT);
+
+		/* counter for sub button */
+		mExpandDirectionCount = new int[ExpandDirection.values().length];
 
 		/* main button bg stuff */
 		mMainBtnBgRegion = pTextureRegionBg;
@@ -234,6 +264,83 @@ public class ExpandableButtonGroup extends Entity {
 			final ITextureRegion pTextureRegionBg,
 			final ITextureRegion pTextureRegionFg,
 			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButtonWithText(pButtonId, ExpandDirection.UP, null, null,
+				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Add normal sub button.
+	 * 
+	 * @param pButtonId
+	 *            The subbutton id.
+	 * @param pExpandDirection
+	 *            The pop up direction when this sub button is about to show.
+	 * @param pTextureRegionBg
+	 *            TextureRegion used by the background of the sub button.
+	 * @param pTextureRegionFg
+	 *            TextureRegion used by the foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
+	public void AddButton(final int pButtonId,
+			final ExpandDirection pExpandDirection,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButtonWithText(pButtonId, pExpandDirection, null, null,
+				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Add normal sub button with extra text description.
+	 * 
+	 * @param pButtonId
+	 *            The subbutton id.
+	 * @param pText
+	 *            The text to be displayed next to this sub button.
+	 * @param pTextExpandDirection
+	 *            The text expand direction.
+	 * @param pTextureRegionBg
+	 *            TextureRegion used by the background of the sub button.
+	 * @param pTextureRegionFg
+	 *            TextureRegion used by the foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
+	public void AddButtonWithText(final int pButtonId, final Text pText,
+			final TextExpandDirection pTextExpandDirection,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButtonWithText(pButtonId, ExpandDirection.UP, pText,
+				pTextExpandDirection, pTextureRegionBg, pTextureRegionFg,
+				pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Add normal sub button with extra text description.
+	 * 
+	 * @param pButtonId
+	 *            The subbutton id.
+	 * @param pExpandDirection
+	 *            The pop up direction when this sub button is about to show.
+	 * @param pText
+	 *            The text to be displayed next to this sub button.
+	 * @param pTextExpandDirection
+	 *            The text expand direction.
+	 * @param pTextureRegionBg
+	 *            TextureRegion used by the background of the sub button.
+	 * @param pTextureRegionFg
+	 *            TextureRegion used by the foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
+	public void AddButtonWithText(final int pButtonId,
+			final ExpandDirection pExpandDirection, final Text pText,
+			final TextExpandDirection pTextExpandDirection,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
 
 		if (pTextureRegionFg == null) {
 			throw new IllegalArgumentException(
@@ -250,7 +357,8 @@ public class ExpandableButtonGroup extends Entity {
 					+ ") is used, choose others...");
 		}
 
-		final SubButton subBtn = new SubButton(pButtonId, -1);
+		final SubButton subBtn = new SubButton(pButtonId, -1, pExpandDirection,
+				pTextExpandDirection);
 		subBtn.setChildrenIgnoreUpdate(true);
 		subBtn.setChildrenVisible(false);
 		subBtn.setZIndex(this.mSubButtonsZIndex++);
@@ -273,6 +381,20 @@ public class ExpandableButtonGroup extends Entity {
 				btnBg.getHeight() / 2, pTextureRegionFg,
 				pVertexBufferObjectManager);
 		btnBg.attachChild(btnFg);
+
+		if (pText != null && pTextExpandDirection != null) {
+			int posNeg = (pTextExpandDirection == TextExpandDirection.RIGHT) ? 1
+					: -1;
+			pText.setPosition(pText.getWidth() * 0.5f, pText.getHeight() * 0.5f);
+			pText.setAlpha(0);
+			Rectangle rect = new Rectangle(btnBg.getX() + posNeg * 0.5f
+					* (btnBg.getWidth() * 1.2f + pText.getWidth()),
+					btnBg.getY(), pText.getWidth(), pText.getHeight(),
+					pVertexBufferObjectManager);
+			rect.setColor(0, 0, 0, 0);
+			rect.attachChild(pText);
+			subBtn.attachChild(rect);
+		}
 
 		sortChildren();
 		mSubButtons.put(pButtonId, subBtn);
@@ -298,6 +420,93 @@ public class ExpandableButtonGroup extends Entity {
 			final ITiledTextureRegion pTiledTextureRegionBg,
 			final ITiledTextureRegion pTiledTextureRegionFg,
 			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddMultiStateButtonWithText(pButtonId, pCurrentIndex,
+				ExpandDirection.UP, null, null, pTiledTextureRegionBg,
+				pTiledTextureRegionFg, pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Add multi-state sub button with extra text description.
+	 * 
+	 * @param pButtonId
+	 *            The sub button id.
+	 * @param pCurrentIndex
+	 *            The index of the current state.
+	 * @param pExpandDirection
+	 *            The pop up direction when this sub button is about to show.
+	 * @param pTiledTextureRegionBg
+	 *            TiledTextureRegion used by background of the sub button.
+	 * @param pTiledTextureRegionFg
+	 *            TiledTextureRegion used by foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
+	public void AddMultiStateButtonWithText(final int pButtonId,
+			final int pCurrentIndex, final ExpandDirection pExpandDirection,
+			final ITiledTextureRegion pTiledTextureRegionBg,
+			final ITiledTextureRegion pTiledTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddMultiStateButtonWithText(pButtonId, pCurrentIndex, pExpandDirection,
+				null, null, pTiledTextureRegionBg, pTiledTextureRegionFg,
+				pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Add multi-state sub button with extra text description.
+	 * 
+	 * @param pButtonId
+	 *            The sub button id.
+	 * @param pCurrentIndex
+	 *            The index of the current state.
+	 * @param pText
+	 *            The text to be displayed next to this sub button.
+	 * @param pTextExpandDirection
+	 *            The text expand direction
+	 * @param pTiledTextureRegionBg
+	 *            TiledTextureRegion used by background of the sub button.
+	 * @param pTiledTextureRegionFg
+	 *            TiledTextureRegion used by foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
+	public void AddMultiStateButtonWithText(final int pButtonId,
+			final int pCurrentIndex, final Text pText,
+			final TextExpandDirection pTextExpandDirection,
+			final ITiledTextureRegion pTiledTextureRegionBg,
+			final ITiledTextureRegion pTiledTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddMultiStateButtonWithText(pButtonId, pCurrentIndex,
+				ExpandDirection.UP, pText, pTextExpandDirection,
+				pTiledTextureRegionBg, pTiledTextureRegionFg,
+				pVertexBufferObjectManager);
+	}
+
+	/**
+	 * Add multi-state sub button with extra text description.
+	 * 
+	 * @param pButtonId
+	 *            The sub button id.
+	 * @param pCurrentIndex
+	 *            The index of the current state.
+	 * @param pExpandDirection
+	 *            The pop up direction when this sub button is about to show.
+	 * @param pText
+	 *            The text to be displayed next to this sub button.
+	 * @param pTextExpandDirection
+	 *            The text expand direction
+	 * @param pTiledTextureRegionBg
+	 *            TiledTextureRegion used by background of the sub button.
+	 * @param pTiledTextureRegionFg
+	 *            TiledTextureRegion used by foreground of the sub button.
+	 * @param pVertexBufferObjectManager
+	 *            VBO manager.
+	 */
+	public void AddMultiStateButtonWithText(final int pButtonId,
+			final int pCurrentIndex, final ExpandDirection pExpandDirection,
+			final Text pText, final TextExpandDirection pTextExpandDirection,
+			final ITiledTextureRegion pTiledTextureRegionBg,
+			final ITiledTextureRegion pTiledTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
 
 		if (pTiledTextureRegionFg == null) {
 			throw new IllegalArgumentException(
@@ -314,7 +523,8 @@ public class ExpandableButtonGroup extends Entity {
 					+ ") is used, choose others...");
 		}
 
-		final SubButton subBtn = new SubButton(pButtonId, pCurrentIndex);
+		final SubButton subBtn = new SubButton(pButtonId, pCurrentIndex,
+				pExpandDirection, pTextExpandDirection);
 		subBtn.setChildrenIgnoreUpdate(true);
 		subBtn.setChildrenVisible(false);
 		subBtn.setZIndex(this.mSubButtonsZIndex++);
@@ -338,6 +548,20 @@ public class ExpandableButtonGroup extends Entity {
 				pVertexBufferObjectManager);
 		btnFg.setCurrentTileIndex(pCurrentIndex);
 		btnBg.attachChild(btnFg);
+
+		if (pText != null && pTextExpandDirection != null) {
+			int posNeg = (pTextExpandDirection == TextExpandDirection.RIGHT) ? 1
+					: -1;
+			pText.setPosition(pText.getWidth() * 0.5f, pText.getHeight() * 0.5f);
+			pText.setAlpha(0);
+			Rectangle rect = new Rectangle(btnBg.getX() + posNeg * 0.5f
+					* (btnBg.getWidth() * 1.2f + pText.getWidth()),
+					btnBg.getY(), pText.getWidth(), pText.getHeight(),
+					pVertexBufferObjectManager);
+			rect.setColor(0, 0, 0, 0);
+			rect.attachChild(pText);
+			subBtn.attachChild(rect);
+		}
 
 		sortChildren();
 		mSubButtons.put(pButtonId, subBtn);
@@ -402,8 +626,10 @@ public class ExpandableButtonGroup extends Entity {
 				ExpandableButtonGroup.this.soundPlay();
 
 				/* skip if busy */
-				if (mMainBtnRotating)
+				if (mMainBtnRotating) {
+					Log.i(TAG, "Main button is busy, skip this one click.");
 					break;
+				}
 
 				int subBtnCnt = mSubButtons.size();
 				SubButton subBtn;
@@ -450,63 +676,130 @@ public class ExpandableButtonGroup extends Entity {
 		private final MoveYModifier mMoveInModifier;
 		private final ScaleModifier mScaleOutModifier;
 		private final ScaleModifier mScaleInModifier;
-		private final ParallelEntityModifier mAnimationOutModifier;
-		private final ParallelEntityModifier mAnimationInModifier;
+		private final ParallelEntityModifier mSpriteOutModifier;
+		private final ParallelEntityModifier mSpriteInModifier;
+		private final IEntityModifierListener mSpriteModifierListener;
+		private final CascadingAlphaModifier mTextOutModifier;
+		private final CascadingAlphaModifier mTextInModifier;
+		private final IEntityModifierListener mTextModifierListener;
 		private boolean mAnimating = false;
-		private final IEntityModifierListener mAnimationListener;
 
-		public SubButton(final int pId, final int pIndex) {
+		public SubButton(final int pId, final int pIndex,
+				final ExpandDirection pExpandDirection,
+				final TextExpandDirection pTextExpandDirection) {
 			super(ExpandableButtonGroup.this.getWidth() * 0.5f,
 					ExpandableButtonGroup.this.getHeight() * 0.5f);
 			mId = pId;
 			mIndex = pIndex;
 
-			/* init self modifiers & modifier listeners */
-			int subBtnCnt = ExpandableButtonGroup.this.mSubButtons.size();
+			/* optional text in/out modifiers & listener */
+			if (pTextExpandDirection != null) {
+				mTextOutModifier = new CascadingAlphaModifier(
+						SUB_BTN_ANIMATION_DURATION * 2, 0, 1);
+				mTextInModifier = new CascadingAlphaModifier(
+						SUB_BTN_ANIMATION_DURATION * 2, 1, 0);
+				mTextModifierListener = new IEntityModifierListener() {
+					@Override
+					public void onModifierStarted(IModifier<IEntity> pModifier,
+							IEntity pItem) {
+						if (pModifier.equals(mTextInModifier)) {
+							SubButton.this.mAnimating = true;
+						}
+					}
+
+					@Override
+					public void onModifierFinished(
+							IModifier<IEntity> pModifier, IEntity pItem) {
+						if (pModifier.equals(mTextOutModifier)) {
+							SubButton.this.mAnimating = false;
+						} else if (pModifier.equals(mTextInModifier)) {
+							SubButton.this.mSpriteInModifier.reset();
+							SubButton.this
+									.registerEntityModifier(SubButton.this.mSpriteInModifier);
+						}
+					}
+				};
+				mTextOutModifier.addModifierListener(mTextModifierListener);
+				mTextInModifier.addModifierListener(mTextModifierListener);
+			} else {
+				mTextOutModifier = null;
+				mTextInModifier = null;
+				mTextModifierListener = null;
+			}
+
+			/* sprite in/out modifiers & listener */
+			int subBtnCnt = ExpandableButtonGroup.this.mExpandDirectionCount[pExpandDirection
+					.ordinal()]++;
+			int posNeg = (pExpandDirection == ExpandDirection.UP) ? 1 : -1;
 			mMoveOutModifier = new MoveYModifier(SUB_BTN_ANIMATION_DURATION,
-					mMainBtnBgSprite.getHeight() * 0.5f,
-					mMainBtnBgSprite.getHeight() * (subBtnCnt + 1.8f));
+					mMainBtnBgSprite.getX(), mMainBtnBgSprite.getY() + posNeg
+							* (subBtnCnt + 1.15f)
+							* mMainBtnBgSprite.getHeight());
 			mMoveInModifier = new MoveYModifier(SUB_BTN_ANIMATION_DURATION,
-					mMainBtnBgSprite.getHeight() * (subBtnCnt + 1.8f),
-					mMainBtnBgSprite.getHeight() * 0.5f);
+					mMainBtnBgSprite.getY() + posNeg * (subBtnCnt + 1.15f)
+							* mMainBtnBgSprite.getHeight(),
+					mMainBtnBgSprite.getX());
 			mScaleOutModifier = new ScaleModifier(SUB_BTN_ANIMATION_DURATION,
 					SUB_BTN_SCALE_MIN, 1.0f);
 			mScaleInModifier = new ScaleModifier(SUB_BTN_ANIMATION_DURATION,
 					1.0f, SUB_BTN_SCALE_MIN);
-			mAnimationListener = new IEntityModifierListener() {
+			mSpriteModifierListener = new IEntityModifierListener() {
 				@Override
 				public void onModifierStarted(IModifier<IEntity> pModifier,
 						IEntity pItem) {
-					SubButton.this.mAnimating = true;
+					if (pModifier.equals(mSpriteOutModifier)
+							|| (pModifier.equals(mSpriteInModifier) && !SubButton.this
+									.containText())) {
+						SubButton.this.mAnimating = true;
+					}
 				}
 
 				@Override
 				public void onModifierFinished(IModifier<IEntity> pModifier,
 						IEntity pItem) {
-					SubButton.this.mAnimating = false;
-					if (pModifier.equals(SubButton.this.mAnimationInModifier)) {
+					if (pModifier.equals(mSpriteOutModifier)) {
+						if (SubButton.this.containText()) {
+							if (SubButton.this.getChildCount() == 2) {
+								IEntity secondChild = SubButton.this
+										.getChildByIndex(1);
+								SubButton.this.mTextOutModifier.reset();
+								secondChild
+										.registerEntityModifier(SubButton.this.mTextOutModifier);
+							}
+						} else {
+							SubButton.this.mAnimating = false;
+						}
+					} else if (pModifier.equals(mSpriteInModifier)) {
+						SubButton.this.mAnimating = false;
 						SubButton.this.setChildrenIgnoreUpdate(true);
 						SubButton.this.setChildrenVisible(false);
 					}
 				}
 			};
-			mAnimationOutModifier = new ParallelEntityModifier(
-					mAnimationListener, mMoveOutModifier, mScaleOutModifier);
-			mAnimationOutModifier.setAutoUnregisterWhenFinished(true);
-			mAnimationInModifier = new ParallelEntityModifier(
-					mAnimationListener, mMoveInModifier, mScaleInModifier);
-			mAnimationInModifier.setAutoUnregisterWhenFinished(true);
+			mSpriteOutModifier = new ParallelEntityModifier(
+					mSpriteModifierListener, mMoveOutModifier,
+					mScaleOutModifier);
+			mSpriteInModifier = new ParallelEntityModifier(
+					mSpriteModifierListener, mMoveInModifier, mScaleInModifier);
 		}
 
 		public void Show(boolean pShow) {
 			if (pShow) {
 				this.setChildrenIgnoreUpdate(false);
 				this.setChildrenVisible(true);
-				mAnimationOutModifier.reset();
-				this.registerEntityModifier(mAnimationOutModifier);
+				mSpriteOutModifier.reset();
+				this.registerEntityModifier(mSpriteOutModifier);
 			} else {
-				mAnimationInModifier.reset();
-				this.registerEntityModifier(mAnimationInModifier);
+				if (this.containText()) {
+					if (this.getChildCount() == 2) {
+						IEntity secondChild = this.getChildByIndex(1);
+						mTextInModifier.reset();
+						secondChild.registerEntityModifier(mTextInModifier);
+					}
+				} else {
+					mSpriteInModifier.reset();
+					this.registerEntityModifier(mSpriteInModifier);
+				}
 			}
 		}
 
@@ -525,25 +818,33 @@ public class ExpandableButtonGroup extends Entity {
 		public boolean onAreaTouched(TouchEvent pSceneTouchEvent,
 				float pTouchAreaLocalX, float pTouchAreaLocalY) {
 
+			IEntity firstChild = null;
 			int action = pSceneTouchEvent.getAction();
 			switch (action) {
 			case TouchEvent.ACTION_DOWN:
 				/* scale up */
-				this.setScale(1.3f);
+				firstChild = this.getFirstChild();
+				if (firstChild != null)
+					firstChild.setScale(1.3f);
 				break;
 			case TouchEvent.ACTION_MOVE:
 				/* do nothing */
 				break;
 			case TouchEvent.ACTION_UP:
 				/* scale down */
-				this.setScale(1.0f);
+				firstChild = this.getFirstChild();
+				if (firstChild != null)
+					firstChild.setScale(1.0f);
 
 				/* sound feedback */
 				ExpandableButtonGroup.this.soundPlay();
 
 				/* skip if busy */
-				if (mAnimating)
+				if (mAnimating) {
+					Log.i(TAG, "SubButton (" + this.mId
+							+ ") is busy, skip this one click.");
 					break;
+				}
 
 				if (ExpandableButtonGroup.this.mOnSubButtonClickListener != null)
 					ExpandableButtonGroup.this.mOnSubButtonClickListener
@@ -608,6 +909,25 @@ public class ExpandableButtonGroup extends Entity {
 
 			return multiState;
 		}
+
+		@Override
+		public boolean containText() {
+			if (getChildCount() == 2)
+				return true;
+			return false;
+		}
+
+		@Override
+		public void updateText(final CharSequence pCharSequence) {
+			if (getChildCount() == 2) {
+				IEntity secondChild = getChildByIndex(1);
+				IEntity firstGrandChild = secondChild.getFirstChild();
+				if (firstGrandChild != null && firstGrandChild instanceof Text) {
+					final Text text = (Text) firstGrandChild;
+					text.setText(pCharSequence);
+				}
+			}
+		}
 	}
 
 	public interface ISubButton {
@@ -637,6 +957,22 @@ public class ExpandableButtonGroup extends Entity {
 		 *            the current state of this sub button.
 		 */
 		void setCurrentIndex(final int pIndex);
+
+		/**
+		 * Check if the sub button contains text or not
+		 * 
+		 * @return true if this sub button contains text.<br>
+		 *         false if it doesn't.
+		 */
+		boolean containText();
+
+		/**
+		 * Only useful if this sub button contains text.
+		 * 
+		 * @param pCharSequence
+		 *            the new text to be displayed.
+		 */
+		void updateText(final CharSequence pCharSequence);
 	}
 
 	public interface IOnSubButtonClickListener {
