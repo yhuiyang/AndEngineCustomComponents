@@ -72,6 +72,7 @@ public class ExpandableButtonGroup extends Entity {
 	// Constants
 	// ===========================================================
 	private final String TAG = this.getClass().getSimpleName();
+	private final int INVALID_INDEX = -1;
 	private final int CAPACITY_DEFAULT = 4;
 	private final int ZINDEX_SUB_BUTTON_START = 1;
 	private final int ZINDEX_MAIN_BUTTON = Integer.MAX_VALUE;
@@ -248,94 +249,101 @@ public class ExpandableButtonGroup extends Entity {
 	// ===========================================================
 	// Methods
 	// ===========================================================
-	/**
-	 * Add normal sub button.
-	 * 
-	 * @param pButtonId
-	 *            The subbutton id.
-	 * @param pTextureRegionBg
-	 *            TextureRegion used by the background of the sub button.
-	 * @param pTextureRegionFg
-	 *            TextureRegion used by the foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
 	public void AddButton(final int pButtonId,
 			final ITextureRegion pTextureRegionBg,
 			final ITextureRegion pTextureRegionFg,
 			final VertexBufferObjectManager pVertexBufferObjectManager) {
-		AddButtonWithText(pButtonId, ExpandDirection.UP, null, null,
+		AddButton(pButtonId, INVALID_INDEX, ExpandDirection.UP, null, null,
 				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
 	}
 
-	/**
-	 * Add normal sub button.
-	 * 
-	 * @param pButtonId
-	 *            The subbutton id.
-	 * @param pExpandDirection
-	 *            The pop up direction when this sub button is about to show.
-	 * @param pTextureRegionBg
-	 *            TextureRegion used by the background of the sub button.
-	 * @param pTextureRegionFg
-	 *            TextureRegion used by the foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
 	public void AddButton(final int pButtonId,
 			final ExpandDirection pExpandDirection,
 			final ITextureRegion pTextureRegionBg,
 			final ITextureRegion pTextureRegionFg,
 			final VertexBufferObjectManager pVertexBufferObjectManager) {
-		AddButtonWithText(pButtonId, pExpandDirection, null, null,
+		AddButton(pButtonId, INVALID_INDEX, pExpandDirection, null, null,
 				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
 	}
 
-	/**
-	 * Add normal sub button with extra text description.
-	 * 
-	 * @param pButtonId
-	 *            The subbutton id.
-	 * @param pText
-	 *            The text to be displayed next to this sub button.
-	 * @param pTextExpandDirection
-	 *            The text expand direction.
-	 * @param pTextureRegionBg
-	 *            TextureRegion used by the background of the sub button.
-	 * @param pTextureRegionFg
-	 *            TextureRegion used by the foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
-	public void AddButtonWithText(final int pButtonId, final Text pText,
+	public void AddButton(final int pButtonId, final Text pText,
 			final TextExpandDirection pTextExpandDirection,
 			final ITextureRegion pTextureRegionBg,
 			final ITextureRegion pTextureRegionFg,
 			final VertexBufferObjectManager pVertexBufferObjectManager) {
-		AddButtonWithText(pButtonId, ExpandDirection.UP, pText,
+		AddButton(pButtonId, INVALID_INDEX, ExpandDirection.UP, pText,
+				pTextExpandDirection, pTextureRegionBg, pTextureRegionFg,
+				pVertexBufferObjectManager);
+	}
+
+	public void AddButton(final int pButtonId,
+			final ExpandDirection pExpandDirection, final Text pText,
+			final TextExpandDirection pTextExpandDirection,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButton(pButtonId, INVALID_INDEX, pExpandDirection, pText,
+				pTextExpandDirection, pTextureRegionBg, pTextureRegionFg,
+				pVertexBufferObjectManager);
+	}
+
+	public void AddButton(final int pButtonId, final int pCurrentIndex,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButton(pButtonId, pCurrentIndex, ExpandDirection.UP, null, null,
+				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
+	}
+
+	public void AddButton(final int pButtonId, final int pCurrentIndex,
+			final ExpandDirection pExpandDirection,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButton(pButtonId, pCurrentIndex, pExpandDirection, null, null,
+				pTextureRegionBg, pTextureRegionFg, pVertexBufferObjectManager);
+	}
+
+	public void AddButton(final int pButtonId, final int pCurrentIndex,
+			final Text pText, final TextExpandDirection pTextExpandDirection,
+			final ITextureRegion pTextureRegionBg,
+			final ITextureRegion pTextureRegionFg,
+			final VertexBufferObjectManager pVertexBufferObjectManager) {
+		AddButton(pButtonId, pCurrentIndex, ExpandDirection.UP, pText,
 				pTextExpandDirection, pTextureRegionBg, pTextureRegionFg,
 				pVertexBufferObjectManager);
 	}
 
 	/**
-	 * Add normal sub button with extra text description.
+	 * Add sub button.
 	 * 
 	 * @param pButtonId
-	 *            The subbutton id.
+	 *            The sub button id. The id should be unique in the same
+	 *            ExpandableButtonGroup.
+	 * @param pCurrentIndex
+	 *            The index of the current state. Set to INVALID_INDEX if this
+	 *            is not a multi-state button.
 	 * @param pExpandDirection
-	 *            The pop up direction when this sub button is about to show.
+	 *            The pop up direction when this sub button is about to appear.
 	 * @param pText
-	 *            The text to be displayed next to this sub button.
+	 *            The optional text description to be displayed next to the sub
+	 *            button.
 	 * @param pTextExpandDirection
-	 *            The text expand direction.
+	 *            The text expand direction related to the sub button.
 	 * @param pTextureRegionBg
-	 *            TextureRegion used by the background of the sub button.
+	 *            This is used by background of the sub button. If this is a
+	 *            multi-state sub button (pCurrentIndex != INVALID_INDEX), the
+	 *            field should be a instance of ITiledTextureRegion. If this
+	 *            field is null, the same ITextureRegion used by the main button
+	 *            will be reused and the size a little scaling down.
 	 * @param pTextureRegionFg
-	 *            TextureRegion used by the foreground of the sub button.
+	 *            This is used by foreground of the sub button. If this is a
+	 *            multi-state sub button (pCurrentIndex != INVALID_INDEX), the
+	 *            field should be a instance of ITiledTextureRegion.
 	 * @param pVertexBufferObjectManager
 	 *            VBO manager.
 	 */
-	public void AddButtonWithText(final int pButtonId,
+	public void AddButton(final int pButtonId, final int pCurrentIndex,
 			final ExpandDirection pExpandDirection, final Text pText,
 			final TextExpandDirection pTextExpandDirection,
 			final ITextureRegion pTextureRegionBg,
@@ -347,170 +355,18 @@ public class ExpandableButtonGroup extends Entity {
 					"Foreground texture region can not be null.");
 		}
 
-		if (pVertexBufferObjectManager == null) {
+		if (pCurrentIndex != INVALID_INDEX
+				&& !(pTextureRegionFg instanceof ITiledTextureRegion)) {
 			throw new IllegalArgumentException(
-					"Vertex buffer object manager can not be null.");
+					"Foreground texture region should be instance of ITiledTextureRegion when pCurrentIndex is not "
+							+ INVALID_INDEX + ".");
 		}
 
-		if (mSubButtons.indexOfKey(pButtonId) >= 0) {
-			throw new IllegalArgumentException("Button id (" + pButtonId
-					+ ") is used, choose others...");
-		}
-
-		final SubButton subBtn = new SubButton(pButtonId, -1, pExpandDirection,
-				pTextExpandDirection);
-		subBtn.setChildrenIgnoreUpdate(true);
-		subBtn.setChildrenVisible(false);
-		subBtn.setZIndex(this.mSubButtonsZIndex++);
-		this.attachChild(subBtn);
-
-		final Sprite btnBg;
-		if (pTextureRegionBg != null) {
-			btnBg = new Sprite(pTextureRegionBg.getWidth() / 2,
-					pTextureRegionBg.getHeight() / 2, pTextureRegionBg,
-					pVertexBufferObjectManager);
-		} else {
-			btnBg = new Sprite(this.mMainBtnBgRegion.getWidth() / 2,
-					this.mMainBtnBgRegion.getHeight() / 2,
-					this.mMainBtnBgRegion, pVertexBufferObjectManager);
-			btnBg.setScale(0.75f);
-		}
-		subBtn.attachChild(btnBg);
-
-		final Sprite btnFg = new Sprite(btnBg.getWidth() / 2,
-				btnBg.getHeight() / 2, pTextureRegionFg,
-				pVertexBufferObjectManager);
-		btnBg.attachChild(btnFg);
-
-		if (pText != null && pTextExpandDirection != null) {
-			int posNeg = (pTextExpandDirection == TextExpandDirection.RIGHT) ? 1
-					: -1;
-			pText.setPosition(pText.getWidth() * 0.5f, pText.getHeight() * 0.5f);
-			pText.setAlpha(0);
-			Rectangle rect = new Rectangle(btnBg.getX() + posNeg * 0.5f
-					* (btnBg.getWidth() * 1.2f + pText.getWidth()),
-					btnBg.getY(), pText.getWidth(), pText.getHeight(),
-					pVertexBufferObjectManager);
-			rect.setColor(0, 0, 0, 0);
-			rect.attachChild(pText);
-			subBtn.attachChild(rect);
-		}
-
-		sortChildren();
-		mSubButtons.put(pButtonId, subBtn);
-		registerTouchAreaOnParentScene(subBtn);
-	}
-
-	/**
-	 * Add multi-state sub button
-	 * 
-	 * @param pButtonId
-	 *            The sub button id.
-	 * @param pCurrentIndex
-	 *            The index of the current state.
-	 * @param pTiledTextureRegionBg
-	 *            TiledTextureRegion used by background of the sub button.
-	 * @param pTiledTextureRegionFg
-	 *            TiledTextureRegion used by foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
-	public void AddMultiStateButton(final int pButtonId,
-			final int pCurrentIndex,
-			final ITiledTextureRegion pTiledTextureRegionBg,
-			final ITiledTextureRegion pTiledTextureRegionFg,
-			final VertexBufferObjectManager pVertexBufferObjectManager) {
-		AddMultiStateButtonWithText(pButtonId, pCurrentIndex,
-				ExpandDirection.UP, null, null, pTiledTextureRegionBg,
-				pTiledTextureRegionFg, pVertexBufferObjectManager);
-	}
-
-	/**
-	 * Add multi-state sub button with extra text description.
-	 * 
-	 * @param pButtonId
-	 *            The sub button id.
-	 * @param pCurrentIndex
-	 *            The index of the current state.
-	 * @param pExpandDirection
-	 *            The pop up direction when this sub button is about to show.
-	 * @param pTiledTextureRegionBg
-	 *            TiledTextureRegion used by background of the sub button.
-	 * @param pTiledTextureRegionFg
-	 *            TiledTextureRegion used by foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
-	public void AddMultiStateButtonWithText(final int pButtonId,
-			final int pCurrentIndex, final ExpandDirection pExpandDirection,
-			final ITiledTextureRegion pTiledTextureRegionBg,
-			final ITiledTextureRegion pTiledTextureRegionFg,
-			final VertexBufferObjectManager pVertexBufferObjectManager) {
-		AddMultiStateButtonWithText(pButtonId, pCurrentIndex, pExpandDirection,
-				null, null, pTiledTextureRegionBg, pTiledTextureRegionFg,
-				pVertexBufferObjectManager);
-	}
-
-	/**
-	 * Add multi-state sub button with extra text description.
-	 * 
-	 * @param pButtonId
-	 *            The sub button id.
-	 * @param pCurrentIndex
-	 *            The index of the current state.
-	 * @param pText
-	 *            The text to be displayed next to this sub button.
-	 * @param pTextExpandDirection
-	 *            The text expand direction
-	 * @param pTiledTextureRegionBg
-	 *            TiledTextureRegion used by background of the sub button.
-	 * @param pTiledTextureRegionFg
-	 *            TiledTextureRegion used by foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
-	public void AddMultiStateButtonWithText(final int pButtonId,
-			final int pCurrentIndex, final Text pText,
-			final TextExpandDirection pTextExpandDirection,
-			final ITiledTextureRegion pTiledTextureRegionBg,
-			final ITiledTextureRegion pTiledTextureRegionFg,
-			final VertexBufferObjectManager pVertexBufferObjectManager) {
-		AddMultiStateButtonWithText(pButtonId, pCurrentIndex,
-				ExpandDirection.UP, pText, pTextExpandDirection,
-				pTiledTextureRegionBg, pTiledTextureRegionFg,
-				pVertexBufferObjectManager);
-	}
-
-	/**
-	 * Add multi-state sub button with extra text description.
-	 * 
-	 * @param pButtonId
-	 *            The sub button id.
-	 * @param pCurrentIndex
-	 *            The index of the current state.
-	 * @param pExpandDirection
-	 *            The pop up direction when this sub button is about to show.
-	 * @param pText
-	 *            The text to be displayed next to this sub button.
-	 * @param pTextExpandDirection
-	 *            The text expand direction
-	 * @param pTiledTextureRegionBg
-	 *            TiledTextureRegion used by background of the sub button.
-	 * @param pTiledTextureRegionFg
-	 *            TiledTextureRegion used by foreground of the sub button.
-	 * @param pVertexBufferObjectManager
-	 *            VBO manager.
-	 */
-	public void AddMultiStateButtonWithText(final int pButtonId,
-			final int pCurrentIndex, final ExpandDirection pExpandDirection,
-			final Text pText, final TextExpandDirection pTextExpandDirection,
-			final ITiledTextureRegion pTiledTextureRegionBg,
-			final ITiledTextureRegion pTiledTextureRegionFg,
-			final VertexBufferObjectManager pVertexBufferObjectManager) {
-
-		if (pTiledTextureRegionFg == null) {
+		if (pCurrentIndex == INVALID_INDEX
+				&& pTextureRegionFg instanceof ITiledTextureRegion) {
 			throw new IllegalArgumentException(
-					"Foreground texture region can not be null.");
+					"Foreground texture region should not be instance of ITiledTextureRegion when pCurrentIndex is "
+							+ INVALID_INDEX + ".");
 		}
 
 		if (pVertexBufferObjectManager == null) {
@@ -531,22 +387,46 @@ public class ExpandableButtonGroup extends Entity {
 		this.attachChild(subBtn);
 
 		final Sprite btnBg;
-		if (pTiledTextureRegionBg != null) {
-			btnBg = new TiledSprite(pTiledTextureRegionBg.getWidth() / 2,
-					pTiledTextureRegionBg.getHeight() / 2,
-					pTiledTextureRegionBg, pVertexBufferObjectManager);
-			((TiledSprite) btnBg).setCurrentTileIndex(pCurrentIndex);
+		if (pTextureRegionBg != null) {
+			if (pTextureRegionBg instanceof ITiledTextureRegion) {
+				btnBg = new TiledSprite(pTextureRegionBg.getWidth() * 0.5f,
+						pTextureRegionBg.getHeight() * 0.5f,
+						(ITiledTextureRegion) pTextureRegionBg,
+						pVertexBufferObjectManager);
+				final TiledSprite btnTiledBg = (TiledSprite) btnBg;
+				if (pCurrentIndex >= 0
+						&& pCurrentIndex < btnTiledBg.getTileCount())
+					btnTiledBg.setCurrentTileIndex(pCurrentIndex);
+				else
+					btnTiledBg.setCurrentTileIndex(0);
+			} else {
+				btnBg = new Sprite(pTextureRegionBg.getWidth() * 0.5f,
+						pTextureRegionBg.getHeight() * 0.5f, pTextureRegionBg,
+						pVertexBufferObjectManager);
+			}
 		} else {
-			btnBg = new Sprite(this.getWidth() / 2, this.getHeight() / 2,
+			btnBg = new Sprite(this.getWidth() * 0.5f, this.getHeight() * 0.5f,
 					this.mMainBtnBgRegion, pVertexBufferObjectManager);
 			btnBg.setScale(0.75f);
 		}
 		subBtn.attachChild(btnBg);
 
-		final TiledSprite btnFg = new TiledSprite(btnBg.getWidth() / 2,
-				btnBg.getHeight() / 2, pTiledTextureRegionFg,
-				pVertexBufferObjectManager);
-		btnFg.setCurrentTileIndex(pCurrentIndex);
+		final Sprite btnFg;
+		if (pTextureRegionFg instanceof ITiledTextureRegion) {
+			btnFg = new TiledSprite(btnBg.getWidth() * 0.5f,
+					btnBg.getHeight() * 0.5f,
+					(ITiledTextureRegion) pTextureRegionFg,
+					pVertexBufferObjectManager);
+			final TiledSprite btnTiledFg = (TiledSprite) btnFg;
+			if (pCurrentIndex >= 0 && pCurrentIndex < btnTiledFg.getTileCount())
+				btnTiledFg.setCurrentTileIndex(pCurrentIndex);
+			else
+				btnTiledFg.setCurrentTileIndex(0);
+		} else {
+			btnFg = new Sprite(btnBg.getWidth() * 0.5f,
+					btnBg.getHeight() * 0.5f, pTextureRegionFg,
+					pVertexBufferObjectManager);
+		}
 		btnBg.attachChild(btnFg);
 
 		if (pText != null && pTextExpandDirection != null) {
@@ -695,9 +575,9 @@ public class ExpandableButtonGroup extends Entity {
 			/* optional text in/out modifiers & listener */
 			if (pTextExpandDirection != null) {
 				mTextOutModifier = new CascadingAlphaModifier(
-						SUB_BTN_ANIMATION_DURATION * 2, 0, 1);
+						SUB_BTN_ANIMATION_DURATION, 0, 1);
 				mTextInModifier = new CascadingAlphaModifier(
-						SUB_BTN_ANIMATION_DURATION * 2, 1, 0);
+						SUB_BTN_ANIMATION_DURATION, 1, 0);
 				mTextModifierListener = new IEntityModifierListener() {
 					@Override
 					public void onModifierStarted(IModifier<IEntity> pModifier,
