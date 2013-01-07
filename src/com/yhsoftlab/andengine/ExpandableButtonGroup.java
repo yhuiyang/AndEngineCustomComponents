@@ -50,8 +50,13 @@ import android.util.SparseArray;
  *    L SubButton => handle touch events.
  *       L SubBtnBgSprite => sprite entity modifer target.
  *          L SubBtnFgSprite
- *       L Rect => (optional) for better child text recognize. entity modifier target.
+ *       L Rectangle => (optional) for better child text recognize. entity modifier target.
  *          L Text => (optional) text description for this sub button.
+ *    L another SubButton
+ *       ...
+ *       ...
+ *       ...
+ *    L another SubButton
  * </pre>
  */
 
