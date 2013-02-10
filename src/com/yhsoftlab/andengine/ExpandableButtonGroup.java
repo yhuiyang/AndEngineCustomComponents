@@ -809,7 +809,28 @@ public class ExpandableButtonGroup extends Entity {
 				IEntity firstGrandChild = secondChild.getFirstChild();
 				if (firstGrandChild != null && firstGrandChild instanceof Text) {
 					final Text text = (Text) firstGrandChild;
+					final CharSequence oldCs = text.getText();
+					final float oldWidth = text.getWidth();
 					text.setText(pCharSequence);
+					/*
+					 * update text & rectangle x/width if char sequence length
+					 * changed
+					 */
+					if (oldCs.length() != pCharSequence.length()) {
+						final float newWidth = text.getWidth();
+						float widthDiff = newWidth - oldWidth;
+						text.setPosition(text.getX() + widthDiff * 0.5f,
+								text.getY());
+						if (secondChild instanceof Rectangle) {
+							Rectangle rect = (Rectangle) secondChild;
+							final float rectOldWidth = rect.getWidth();
+							float rectWidthDiff = newWidth - rectOldWidth;
+							rect.setPosition(
+									rect.getX() + rectWidthDiff * 0.5f,
+									rect.getY());
+							rect.setWidth(newWidth);
+						}
+					}
 				}
 			}
 		}
